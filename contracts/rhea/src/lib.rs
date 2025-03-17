@@ -11,12 +11,14 @@ use near_sdk::borsh::BorshSerialize;
 use near_sdk::collections::LazyOption;
 use near_sdk::json_types::U128;
 use near_sdk::{
-    env, log, near, require, AccountId, BorshStorageKey, NearToken, PanicOnDefault, PromiseOrValue,
+    assert_one_yocto, env, log, near, require, AccountId, BorshStorageKey, NearToken,
+    PanicOnDefault, PromiseOrValue,
 };
 
 #[derive(PanicOnDefault)]
 #[near(contract_state)]
 pub struct Contract {
+    owner_id: AccountId,
     token: FungibleToken,
     metadata: LazyOption<FungibleTokenMetadata>,
 }
@@ -58,6 +60,7 @@ impl Contract {
         require!(!env::state_exists(), "Already initialized");
         metadata.assert_valid();
         let mut this = Self {
+            owner_id: owner_id.clone(),
             token: FungibleToken::new(StorageKey::FungibleToken),
             metadata: LazyOption::new(StorageKey::Metadata, Some(&metadata)),
         };
@@ -72,6 +75,18 @@ impl Contract {
         .emit();
 
         this
+    }
+
+    #[payable]
+    pub fn update_metadata(&mut self, metadata: FungibleTokenMetadata) {
+        assert_one_yocto();
+        require!(self.owner_id == env::predecessor_account_id(), "Not allow");
+        let current_metadata = self.metadata.get().unwrap();
+        require!(
+            current_metadata.decimals == metadata.decimals,
+            "Can't change decimals"
+        );
+        self.metadata.set(&metadata);
     }
 }
 
