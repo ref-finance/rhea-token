@@ -81,6 +81,7 @@ impl Contract {
     pub fn update_metadata(&mut self, metadata: FungibleTokenMetadata) {
         assert_one_yocto();
         require!(self.owner_id == env::predecessor_account_id(), "Not allow");
+        metadata.assert_valid();
         let current_metadata = self.metadata.get().unwrap();
         require!(
             current_metadata.decimals == metadata.decimals,
